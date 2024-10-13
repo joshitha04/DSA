@@ -138,8 +138,7 @@ void registerStudent() {
     scanf("%s", newStudent->name);
     printf("Enter Password: ");
     scanf("%s", newStudent->pass);
-    printf("Enter Marks: ");
-    scanf("%d", &newStudent->marks);
+    newStudent->marks = 0; // Initialize marks to 0
     printf("Enter Assigned Teacher ID: ");
     scanf("%d", &newStudent->assignedTeacherID);
     newStudent->next = NULL;
@@ -209,106 +208,149 @@ void studentLogin() {
     printf("Invalid Student ID or Password.\n");
 }
 
-// Function to calculate average
-double calculateAverage(int marks[], int count) {
-    double sum = 0;
-    for (int i = 0; i < count; i++) {
-        sum += marks[i];
-    }
-    return sum / count;
-}
-
-// Function to compare two integers for qsort
-int compare(const void *a, const void *b) {
-    return (*(int*)a - *(int*)b);
-}
-
-// Function to calculate median
-double calculateMedian(int marks[], int count) {
-    if (count == 0) return 0;
-    // Sort the marks for median calculation
-    qsort(marks, count, sizeof(int), compare);
-    if (count % 2 == 0) {
-        return (marks[count / 2 - 1] + marks[count / 2]) / 2.0;
-    } else {
-        return marks[count / 2];
-    }
-}
-
-// Function to calculate Q1 and Q3
-void calculateQuartiles(int marks[], int count, double *Q1, double *Q3) {
-    qsort(marks, count, sizeof(int), compare);
-    if (count % 2 == 0) {
-        // Even number of elements
-        int mid = count / 2;
-        *Q1 = calculateMedian(marks, mid);
-        *Q3 = calculateMedian(marks + mid, mid);
-    } else {
-        // Odd number of elements
-        int mid = count / 2;
-        *Q1 = calculateMedian(marks, mid);
-        *Q3 = calculateMedian(marks + mid + 1, mid);
-    }
-}
-
 // Function to view student statistics
 void viewStudentStatistics(student_node *student) {
-    int choice;
-    int marks[100]; // Array to hold marks of students assigned to the teacher
-    int count = 0;
+    printf("Name: %s\n", student->name);
+    printf("Marks: %d\n", student->marks);
+    printf("Assigned Teacher ID: %d\n", student->assignedTeacherID);
+}
 
-    // Collect marks of students assigned to the teacher
+// Function for teacher login
+void teacherLogin() {
+    int teacherID;
+    char pass[20];
+
+    printf("Enter Teacher ID: ");
+    scanf("%d", &teacherID);
+
+    printf("Enter Password: ");
+    scanf("%s", pass);
+
+    int index = hashTeacher(teacherID);
+    teacher_node *currentTeacher = teacherTable[index];
+
+    // Search for the teacher
+    while (currentTeacher != NULL) {
+        if (currentTeacher->teacherID == teacherID && strcmp(currentTeacher->pass, pass) == 0) {
+            printf("Login successful! Teacher: %s\n", currentTeacher->name);
+            int choice;
+            while (1) {
+                printf("\n1. Assign Marks\n2. View Assigned Students\n3. View Statistics of Assigned Students\n4. Exit\n");
+                printf("Choose an option: ");
+                scanf("%d", &choice);
+
+                switch (choice) {
+                    case 1:
+                        modifyStudentMarks(teacherID);
+                        break;
+                    case 2:
+                        showStudents(teacherID);
+                        break;
+                    case 3:
+                        showStatistics(teacherID);
+                        break;
+                    case 4:
+                        printf("Exiting teacher dashboard.\n");
+                        return;
+                    default:
+                        printf("Invalid choice, please try again.\n");
+                }
+            }
+        }
+        currentTeacher = currentTeacher->next;
+    }
+    printf("Invalid Teacher ID or Password.\n");
+}
+
+// Function to show students assigned to a teacher
+void showStudents(int teacherID) {
+    int found = 0;
+    printf("Students assigned to you:\n");
     for (int i = 0; i < TABLE_SIZE; i++) {
         student_node *currentStudent = studentTable[i];
         while (currentStudent != NULL) {
-            if (currentStudent->assignedTeacherID == student->assignedTeacherID) {
-                marks[count++] = currentStudent->marks;
+            if (currentStudent->assignedTeacherID == teacherID) {
+                printf("Student ID: %d, Name: %s\n", currentStudent->studentID, currentStudent->name);
+                found = 1;
+            }
+            currentStudent = currentStudent->next;
+        }
+    }
+    if (!found) {
+        printf("No students assigned to you.\n");
+    }
+}
+
+// Function to modify student marks by teacher
+void modifyStudentMarks(int teacherID) {
+    int studentID;
+    int newMarks;
+
+    printf("Enter Student ID to assign marks: ");
+    scanf("%d", &studentID);
+    
+    int index = hashStudent(studentID);
+    student_node *currentStudent = studentTable[index];
+
+    // Search for the student
+    while (currentStudent != NULL) {
+        if (currentStudent->studentID == studentID && currentStudent->assignedTeacherID == teacherID) {
+          
+            printf("Enter new marks for student %s: ", currentStudent->name);
+            scanf("%d", &newMarks);
+            currentStudent->marks = newMarks; // Assign new marks
+            saveStudents(); // Save updated marks to the file
+            printf("Marks assigned successfully!\n");
+            return;
+        }
+        currentStudent = currentStudent->next;
+    }
+    printf("Student not found or not assigned to you.\n");
+}
+
+// Function to show statistics of assigned students
+void showStatistics(int teacherID) {
+    int totalMarks = 0;
+    int count = 0;
+    int minMarks = 101; // Assuming marks are in the range 0-100
+    int maxMarks = -1;
+
+    for (int i = 0; i < TABLE_SIZE; i++) {
+        student_node *currentStudent = studentTable[i];
+        while (currentStudent != NULL) {
+            if (currentStudent->assignedTeacherID == teacherID) {
+                totalMarks += currentStudent->marks;
+                count++;
+                if (currentStudent->marks < minMarks) {
+                    minMarks = currentStudent->marks;
+                }
+                if (currentStudent->marks > maxMarks) {
+                    maxMarks = currentStudent->marks;
+                }
             }
             currentStudent = currentStudent->next;
         }
     }
 
-    while (1) {
-        printf("\n1. View Marks\n2. View Statistics (Average, Median, Q1, Q3)\n3. Exit\n");
-        printf("Choose an option: ");
-        scanf("%d", &choice);
-
-        switch (choice) {
-            case 1:
-                printf("Name: %s\n", student->name);
-                printf("Marks: %d\n", student->marks);
-                break;
-            case 2:
-                {
-                    double average = calculateAverage(marks, count);
-                    double median = calculateMedian(marks, count);
-                    double Q1, Q3;
-                    calculateQuartiles(marks, count, &Q1, &Q3);
-
-                    printf("Statistics for students assigned to Teacher ID %d:\n", student->assignedTeacherID);
-                    printf("Average: %.2f\n", average);
-                    printf("Median: %.2f\n", median);
-                    printf("Q1: %.2f\n", Q1);
-                    printf("Q3: %.2f\n", Q3);
-                }
-                break;
-            case 3:
-                return;
-            default:
-                printf("Invalid option, try again.\n");
-                break;
-        }
+    if (count > 0) {
+        float average = (float)totalMarks / count;
+        printf("Total Students: %d\n", count);
+        printf("Average Marks: %.2f\n", average);
+        printf("Minimum Marks: %d\n", minMarks);
+        printf("Maximum Marks: %d\n", maxMarks);
+    } else {
+        printf("No students assigned to you.\n");
     }
 }
 
 // Main function
 int main() {
-    loadStudents();
-    loadTeachers();
+    loadStudents(); // Load students from file
+    loadTeachers(); // Load teachers from file
 
     int choice;
     while (1) {
-        printf("\n1. Register Student\n2. Register Teacher\n3. Student Login\n4. Exit\n");
+        printf("\n1. Register Student\n2. Register Teacher\n3. Student Login\n4. Teacher Login\n5. Exit\n");
         printf("Choose an option: ");
         scanf("%d", &choice);
 
@@ -323,9 +365,13 @@ int main() {
                 studentLogin();
                 break;
             case 4:
+                teacherLogin();
+                break;
+            case 5:
+                printf("Exiting the program.\n");
                 exit(0);
             default:
-                printf("Invalid option, try again.\n");
+                printf("Invalid choice, please try again.\n");
         }
     }
 
