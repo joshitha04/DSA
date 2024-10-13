@@ -183,6 +183,7 @@ void registerTeacher() {
 }
 
 // Function for student login
+// Function for student login
 void studentLogin() {
     int studentID;
     char pass[20];
@@ -200,116 +201,40 @@ void studentLogin() {
     while (currentStudent != NULL) {
         if (currentStudent->studentID == studentID && strcmp(currentStudent->pass, pass) == 0) {
             printf("Login successful!\n");
-            viewStudentStatistics(currentStudent); // Call to view marks or statistics
-            return;
-        }
-        currentStudent = currentStudent->next;
-    }
-    printf("Invalid Student ID or Password.\n");
-}
-
-// Function to view student statistics
-void viewStudentStatistics(student_node *student) {
-    printf("Name: %s\n", student->name);
-    printf("Marks: %d\n", student->marks);
-    printf("Assigned Teacher ID: %d\n", student->assignedTeacherID);
-}
-
-// Function for teacher login
-void teacherLogin() {
-    int teacherID;
-    char pass[20];
-
-    printf("Enter Teacher ID: ");
-    scanf("%d", &teacherID);
-
-    printf("Enter Password: ");
-    scanf("%s", pass);
-
-    int index = hashTeacher(teacherID);
-    teacher_node *currentTeacher = teacherTable[index];
-
-    // Search for the teacher
-    while (currentTeacher != NULL) {
-        if (currentTeacher->teacherID == teacherID && strcmp(currentTeacher->pass, pass) == 0) {
-            printf("Login successful! Teacher: %s\n", currentTeacher->name);
             int choice;
             while (1) {
-                printf("\n1. Assign Marks\n2. View Assigned Students\n3. View Statistics of Assigned Students\n4. Exit\n");
+                printf("\n1. View Marks\n2. View Statistics of Assigned Students\n3. Exit\n");
                 printf("Choose an option: ");
                 scanf("%d", &choice);
 
                 switch (choice) {
                     case 1:
-                        modifyStudentMarks(teacherID);
+                        viewStudentMarks(currentStudent); // Call to view marks
                         break;
                     case 2:
-                        showStudents(teacherID);
+                        viewStatistics(currentStudent->assignedTeacherID); // Call to view statistics
                         break;
                     case 3:
-                        showStatistics(teacherID);
-                        break;
-                    case 4:
-                        printf("Exiting teacher dashboard.\n");
-                        return;
+                        printf("Exiting student dashboard.\n");
+                        return; // Exit the loop and return to main menu
                     default:
                         printf("Invalid choice, please try again.\n");
                 }
             }
         }
-        currentTeacher = currentTeacher->next;
+        currentStudent = currentStudent->next; // Move to the next student in the chain
     }
-    printf("Invalid Teacher ID or Password.\n");
+    printf("Invalid Student ID or Password.\n");
 }
 
-// Function to show students assigned to a teacher
-void showStudents(int teacherID) {
-    int found = 0;
-    printf("Students assigned to you:\n");
-    for (int i = 0; i < TABLE_SIZE; i++) {
-        student_node *currentStudent = studentTable[i];
-        while (currentStudent != NULL) {
-            if (currentStudent->assignedTeacherID == teacherID) {
-                printf("Student ID: %d, Name: %s\n", currentStudent->studentID, currentStudent->name);
-                found = 1;
-            }
-            currentStudent = currentStudent->next;
-        }
-    }
-    if (!found) {
-        printf("No students assigned to you.\n");
-    }
+// Function to view student marks
+void viewStudentMarks(student_node *student) {
+    printf("Name: %s\n", student->name);
+    printf("Marks: %d\n", student->marks);
 }
 
-// Function to modify student marks by teacher
-void modifyStudentMarks(int teacherID) {
-    int studentID;
-    int newMarks;
-
-    printf("Enter Student ID to assign marks: ");
-    scanf("%d", &studentID);
-    
-    int index = hashStudent(studentID);
-    student_node *currentStudent = studentTable[index];
-
-    // Search for the student
-    while (currentStudent != NULL) {
-        if (currentStudent->studentID == studentID && currentStudent->assignedTeacherID == teacherID) {
-          
-            printf("Enter new marks for student %s: ", currentStudent->name);
-            scanf("%d", &newMarks);
-            currentStudent->marks = newMarks; // Assign new marks
-            saveStudents(); // Save updated marks to the file
-            printf("Marks assigned successfully!\n");
-            return;
-        }
-        currentStudent = currentStudent->next;
-    }
-    printf("Student not found or not assigned to you.\n");
-}
-
-// Function to show statistics of assigned students
-void showStatistics(int teacherID) {
+// Function to view statistics of all students assigned to the teacher
+void viewStatistics(int teacherID) {
     int totalMarks = 0;
     int count = 0;
     int minMarks = 101; // Assuming marks are in the range 0-100
@@ -339,14 +264,39 @@ void showStatistics(int teacherID) {
         printf("Minimum Marks: %d\n", minMarks);
         printf("Maximum Marks: %d\n", maxMarks);
     } else {
-        printf("No students assigned to you.\n");
+        printf("No students assigned to this teacher.\n");
     }
 }
 
-// Main function
+// Function for teacher login
+void teacherLogin() {
+    int teacherID;
+    char pass[20];
+
+    printf("Enter Teacher ID: ");
+    scanf("%d", &teacherID);
+
+    printf("Enter Password: ");
+    scanf("%s", pass);
+
+    int index = hashTeacher(teacherID);
+    teacher_node *currentTeacher = teacherTable[index];
+
+    // Search for the teacher
+    while (currentTeacher != NULL) {
+        if (currentTeacher->teacherID == teacherID && strcmp(currentTeacher->pass, pass) == 0) {
+            printf("Login successful!\n");
+            // Additional teacher options can go here
+            return;
+        }
+        currentTeacher = currentTeacher->next;
+    }
+    printf("Invalid Teacher ID or Password.\n");
+}
+
 int main() {
-    loadStudents(); // Load students from file
-    loadTeachers(); // Load teachers from file
+    loadStudents();
+    loadTeachers();
 
     int choice;
     while (1) {
@@ -368,12 +318,12 @@ int main() {
                 teacherLogin();
                 break;
             case 5:
-                printf("Exiting the program.\n");
+                saveStudents();
+                saveTeachers();
                 exit(0);
             default:
                 printf("Invalid choice, please try again.\n");
         }
     }
-
     return 0;
 }
